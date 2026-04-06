@@ -18,4 +18,9 @@ FEATURES: dict[str, FeatureFn] = {
     "max_sizes_per_product": orders.max_sizes_per_product,
     "avg_item_price": orders.avg_item_price,
     "customer_prior_order_count": customers.customer_prior_order_count,
+    "customer_avg_order_value": customers.customer_avg_order_value,
+    "customer_days_since_last_order": customers.customer_days_since_last_order,
+    "weekend_order": customers.weekend_order,
+    "checkout_hour": customers.checkout_hour,
+    "support_contact_count_30d": customers.support_contact_count_30d,
 }

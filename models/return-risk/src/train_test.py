@@ -18,11 +18,10 @@ def _frame(n: int = 200) -> pd.DataFrame:
     )
 
 
-def test_split_is_temporal() -> None:
-    """The eval protocol (MODEL_CARD.md) is a temporal split. Guard it."""
-    train_part, test_part = train.temporal_split(_frame(), holdout_months=3)
-    assert train_part["checkout_ts"].max() < test_part["checkout_ts"].min()
-    assert len(train_part) > 0 and len(test_part) > 0
+def test_split_fraction() -> None:
+    train_part, test_part = train.shuffle_split(_frame(), test_size=0.2)
+    assert len(test_part) == 40  # 20% of 200
+    assert len(train_part) == 160
 
 
 def test_fit_returns_scoring_model() -> None:

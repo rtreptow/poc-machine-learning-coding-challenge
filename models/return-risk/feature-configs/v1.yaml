@@ -8,3 +8,8 @@ features:
   - max_sizes_per_product
   - avg_item_price
   - customer_prior_order_count
+  - customer_avg_order_value
+  - customer_days_since_last_order
+  - weekend_order
+  - checkout_hour
+  - support_contact_count_30d

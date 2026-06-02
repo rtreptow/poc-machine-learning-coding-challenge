@@ -38,3 +38,9 @@ def avg_item_price(tables: Tables) -> pd.Series:
     """Mean unit price across the order's line items."""
     means = tables.order_items.groupby("order_id")["price"].mean()
     return means.reindex(tables.orders["order_id"], fill_value=0.0).astype(float)
+
+
+def log_order_value(tables: Tables) -> pd.Series:
+    """Log-scale order value -- compresses the long tail for high-spend orders."""
+    import numpy as np
+    return np.log1p(tables.orders.set_index("order_id")["order_value"]).astype(float)

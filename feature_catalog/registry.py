@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pandas as pd
 
-from feature_catalog.features import customers, orders
+from feature_catalog.features import customers, orders, support
 from feature_catalog.types import Tables
 
 FeatureFn = Callable[[Tables], pd.Series]
@@ -18,4 +18,7 @@ FEATURES: dict[str, FeatureFn] = {
     "max_sizes_per_product": orders.max_sizes_per_product,
     "avg_item_price": orders.avg_item_price,
     "customer_prior_order_count": customers.customer_prior_order_count,
+    "support_contact_count": support.support_contact_count,
+    "presale_contact_count": support.presale_contact_count,
+    "log_order_value": orders.log_order_value,
 }

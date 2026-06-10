@@ -1,0 +1,59 @@
+{
+  "seed": 412,
+  "baseline_auc": 0.8047,
+  "v13_random_auc": 0.9324,
+  "v13_temporal_auc": 0.8976,
+  "prod_sim_auc": 0.8072,
+  "leak_gain_share": 0.5593,
+  "senior_fixed_auc": 0.8058,
+  "rederived_auc": 0.8128,
+  "rederived_lift": 0.007,
+  "alex_random_auc": 0.9349,
+  "alex_prod_sim_auc": 0.8044,
+  "part2_auc": 0.8866,
+  "part2_lift": 0.0819,
+  "drift_gap": 0.0349,
+  "post_checkout_contact_share": 0.9166,
+  "leak_serving_time_mean": 0.0306,
+  "monthly_return_rate_first": 0.2325,
+  "monthly_return_rate_last": 0.5908,
+  "multi_seed": {
+    "seeds": [
+      412,
+      7,
+      99,
+      2024,
+      31337
+    ],
+    "drift_gap": {
+      "values": [
+        0.0349,
+        0.0299,
+        0.0296,
+        0.0293,
+        0.0323
+      ],
+      "median": 0.0299
+    },
+    "rederived_lift": {
+      "values": [
+        0.007,
+        0.0061,
+        0.0074,
+        0.0063,
+        0.0052
+      ],
+      "median": 0.0063
+    },
+    "part2_lift": {
+      "values": [
+        0.0819,
+        0.0813,
+        0.0842,
+        0.0811,
+        0.0772
+      ],
+      "median": 0.0813
+    }
+  }
+}

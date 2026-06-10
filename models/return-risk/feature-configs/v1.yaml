@@ -1,0 +1,10 @@
+model: return-risk
+label_horizon_days: 60
+threshold: 0.50
+features:
+  - order_value
+  - item_count
+  - unique_product_count
+  - max_sizes_per_product
+  - avg_item_price
+  - customer_prior_order_count

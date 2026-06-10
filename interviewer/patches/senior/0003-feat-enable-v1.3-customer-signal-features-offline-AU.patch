@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Dana Riggs <dana.riggs@vector-contracting.example>
+Date: Tue, 7 Apr 2026 09:05:00 -0700
+Subject: [PATCH 3/3] feat: enable v1.3 customer signal features (offline AUC
+ 0.93)
+
+---
+ models/return-risk/feature-configs/v1.yaml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/models/return-risk/feature-configs/v1.yaml b/models/return-risk/feature-configs/v1.yaml
+index 410c641..90a52bc 100644
+--- a/models/return-risk/feature-configs/v1.yaml
++++ b/models/return-risk/feature-configs/v1.yaml
+@@ -8,3 +8,8 @@ features:
+   - max_sizes_per_product
+   - avg_item_price
+   - customer_prior_order_count
++  - customer_avg_order_value
++  - customer_days_since_last_order
++  - weekend_order
++  - checkout_hour
++  - support_contact_count_30d
+-- 
+2.39.5 (Apple Git-154)
+

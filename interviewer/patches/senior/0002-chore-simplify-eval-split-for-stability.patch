@@ -1,0 +1,101 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Dana Riggs <dana.riggs@vector-contracting.example>
+Date: Mon, 6 Apr 2026 15:40:00 -0700
+Subject: [PATCH 2/3] chore: simplify eval split for stability
+
+---
+ models/return-risk/src/train.py      | 23 ++++++++++++-----------
+ models/return-risk/src/train_test.py |  9 ++++-----
+ 2 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/models/return-risk/src/train.py b/models/return-risk/src/train.py
+index 0cf3d57..90261a4 100644
+--- a/models/return-risk/src/train.py
++++ b/models/return-risk/src/train.py
+@@ -1,8 +1,7 @@
+ """Train and evaluate the return-risk model.
+ 
+-Protocol (documented in MODEL_CARD.md): temporal split -- train on everything
+-before the holdout cutoff, evaluate ROC AUC on the final 3 months. `--eval-only`
+-re-scores the saved model on the holdout without retraining.
++Uses a random 80/20 split -- simpler and more stable than the old temporal
++carve-out. `--eval-only` re-scores the saved model on the holdout.
+ """
+ 
+ from __future__ import annotations
+@@ -13,6 +12,7 @@ from pathlib import Path
+ 
+ import pandas as pd
+ from sklearn.metrics import roc_auc_score
++from sklearn.model_selection import train_test_split
+ from xgboost import XGBClassifier
+ 
+ from feature_catalog.frame import build_training_frame
+@@ -21,19 +21,20 @@ from feature_catalog.types import FeatureConfig, Tables
+ REPO_ROOT = Path(__file__).resolve().parents[3]
+ MODEL_DIR = Path(__file__).resolve().parents[1]
+ ARTIFACTS = MODEL_DIR / "artifacts"
+-HOLDOUT_MONTHS = 3
+ 
+ 
+ def load_config() -> FeatureConfig:
+     return FeatureConfig.load(MODEL_DIR / "feature-configs" / "v1.yaml")
+ 
+ 
+-def temporal_split(
+-    frame: pd.DataFrame, holdout_months: int = HOLDOUT_MONTHS
++def shuffle_split(
++    frame: pd.DataFrame, test_size: float = 0.2
+ ) -> tuple[pd.DataFrame, pd.DataFrame]:
+-    """Train on history, evaluate on the most recent window -- never the reverse."""
+-    cutoff = frame["checkout_ts"].max() - pd.DateOffset(months=holdout_months)
+-    return frame[frame["checkout_ts"] <= cutoff], frame[frame["checkout_ts"] > cutoff]
++    """Random split for evaluation."""
++    train_frame, test_frame = train_test_split(
++        frame, test_size=test_size, random_state=42, stratify=frame["label"]
++    )
++    return train_frame, test_frame
+ 
+ 
+ def fit(train_frame: pd.DataFrame, features: list[str]) -> XGBClassifier:
+@@ -60,7 +61,7 @@ def main(eval_only: bool = False) -> None:
+     config = load_config()
+     tables = Tables.load(REPO_ROOT / "data")
+     frame = build_training_frame(tables, config.features, config.label_horizon_days)
+-    train_frame, holdout = temporal_split(frame)
++    train_frame, holdout = shuffle_split(frame)
+ 
+     if eval_only:
+         model = XGBClassifier()
+@@ -72,7 +73,7 @@ def main(eval_only: bool = False) -> None:
+         holdout["label"], model.predict_proba(holdout[config.features])[:, 1]
+     )
+     importances = gain_share(model, config.features)
+-    print(f"holdout AUC (temporal, last {HOLDOUT_MONTHS} months): {auc:.4f}")
++    print(f"holdout AUC (random 20% split): {auc:.4f}")
+     print("feature importance (gain share):")
+     for name, share in sorted(importances.items(), key=lambda kv: -kv[1]):
+         print(f"  {name:<32s} {share:.3f}")
+diff --git a/models/return-risk/src/train_test.py b/models/return-risk/src/train_test.py
+index 8a2723d..0245ce8 100644
+--- a/models/return-risk/src/train_test.py
++++ b/models/return-risk/src/train_test.py
+@@ -18,11 +18,10 @@ def _frame(n: int = 200) -> pd.DataFrame:
+     )
+ 
+ 
+-def test_split_is_temporal() -> None:
+-    """The eval protocol (MODEL_CARD.md) is a temporal split. Guard it."""
+-    train_part, test_part = train.temporal_split(_frame(), holdout_months=3)
+-    assert train_part["checkout_ts"].max() < test_part["checkout_ts"].min()
+-    assert len(train_part) > 0 and len(test_part) > 0
++def test_split_fraction() -> None:
++    train_part, test_part = train.shuffle_split(_frame(), test_size=0.2)
++    assert len(test_part) == 40  # 20% of 200
++    assert len(train_part) == 160
+ 
+ 
+ def test_fit_returns_scoring_model() -> None:
+-- 
+2.39.5 (Apple Git-154)
+

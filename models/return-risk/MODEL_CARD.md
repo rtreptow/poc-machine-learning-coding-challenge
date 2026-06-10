@@ -8,9 +8,8 @@ fulfillment; scoring happens synchronously in the checkout path.
 
 ## Data
 
-Four tables generated into `data/` (see `data/generate.py`): `orders`,
-`order_items`, `returns`, `support_contacts`. Label: order returned within
-60 days of checkout.
+Four tables in `data/`: `orders`, `order_items`, `returns`,
+`support_contacts`. Label: order returned within 60 days of checkout.
 
 ## Features
 

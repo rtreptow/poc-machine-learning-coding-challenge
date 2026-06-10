@@ -4,3 +4,4 @@ __pycache__/
 models/return-risk/artifacts/
 .stamp-tmp/
 .handoffs/
+/interviewer/

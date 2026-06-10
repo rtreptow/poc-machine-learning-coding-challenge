@@ -6,7 +6,6 @@ predicting, at checkout time, whether an order will be returned.
 ## Quickstart
 
     uv sync
-    make data     # generate the four CSVs into data/
     make train    # train + evaluate (temporal holdout)
     make test
     make lint

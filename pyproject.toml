@@ -25,10 +25,9 @@ build-backend = "hatchling.build"
 packages = ["feature_catalog"]
 
 [tool.pytest.ini_options]
-# Repo root on sys.path so `data.*` and `interviewer.*` import without packaging.
+# Repo root on sys.path so first-party packages import without packaging.
 pythonpath = ["."]
-# Candidate-facing suite only; interviewer/ tests run explicitly via Makefile targets.
-testpaths = ["feature_catalog", "models", "data"]
+testpaths = ["feature_catalog", "models"]
 
 [tool.ruff]
 line-length = 100

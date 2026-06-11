@@ -8,20 +8,18 @@ fulfillment; scoring happens synchronously in the checkout path.
 
 ## Data
 
-Four tables in `data/`: `orders`, `order_items`, `returns`,
+Four tables committed in `data/`: `orders`, `order_items`, `returns`,
 `support_contacts`. Label: order returned within 60 days of checkout.
 
 ## Features
 
 Selected per-model in `feature-configs/v1.yaml`; implementations live in
-`feature_catalog/`. Anything derived from customer history must be
-computable at the order's checkout time (see CONTRIBUTING.md).
+`feature_catalog/`.
 
 ## Evaluation protocol
 
 - **Temporal split**: train on all orders up to (latest checkout − 3 months);
-  evaluate on the final 3 months. Return behavior drifts, so a shuffled
-  split overstates performance — the holdout must be the future.
+  evaluate on the final 3 months.
 - **Metric**: ROC AUC on the temporal holdout (`make eval`).
 - **Current baseline: AUC 0.80.** Any PR claiming a different
   number must produce it under this protocol.

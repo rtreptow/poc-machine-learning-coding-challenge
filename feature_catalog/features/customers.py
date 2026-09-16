@@ -55,12 +55,15 @@ def checkout_hour(tables: Tables) -> pd.Series:
 
 
 def support_contact_count_30d(tables: Tables) -> pd.Series:
-    """Customer support touchpoints within 30 days of the order -- friction signal."""
+    """Support touchpoints in the 30 days *before* checkout -- friction signal.
+
+    Point-in-time: only contacts strictly before the order's checkout_ts count.
+    Contacts after checkout (which correlate strongly with returns and do not
+    exist yet at scoring time) must never leak in.
+    """
     orders = tables.orders[["order_id", "checkout_ts"]]
     contacts = tables.support_contacts.merge(orders, on="order_id")
-    near = contacts[
-        (contacts["contact_ts"] - contacts["checkout_ts"]).abs()
-        <= pd.Timedelta(days=30)
-    ]
+    lead = contacts["checkout_ts"] - contacts["contact_ts"]
+    near = contacts[(lead > pd.Timedelta(0)) & (lead <= pd.Timedelta(days=30))]
     counts = near.groupby("order_id").size()
     return counts.reindex(tables.orders["order_id"], fill_value=0).astype(float)

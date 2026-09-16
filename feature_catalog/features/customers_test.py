@@ -50,8 +50,8 @@ def test_v13_customer_signal_features_smoke() -> None:
     contacts = pd.DataFrame(
         {
             "customer_id": ["C1"],
-            "order_id": ["O1"],
-            "contact_ts": pd.to_datetime(["2026-01-07"]),
+            "order_id": ["O2"],
+            "contact_ts": pd.to_datetime(["2026-01-20"]),  # before O2 checkout
             "channel": ["email"],
         }
     )
@@ -60,4 +60,29 @@ def test_v13_customer_signal_features_smoke() -> None:
     assert customer_days_since_last_order(tables).loc["O1"] == -1.0
     assert weekend_order(tables).loc["O1"] == 1.0  # 2026-01-04 is a Sunday
     assert checkout_hour(tables).loc["O2"] == 18.0
-    assert support_contact_count_30d(tables).loc["O1"] == 1.0
+    # 2026-01-20 is 12 days before O2's 2026-02-01 checkout -> counts.
+    assert support_contact_count_30d(tables).loc["O2"] == 1.0
+
+
+def test_support_contacts_after_checkout_do_not_leak() -> None:
+    """A contact *after* checkout must never count -- it doesn't exist at scoring
+    time and correlates with the return label (this was the v1.3 leak)."""
+    orders = pd.DataFrame(
+        {
+            "order_id": ["O1"],
+            "customer_id": ["C1"],
+            "checkout_ts": pd.to_datetime(["2026-01-04 09:00"]),
+            "order_value": [10.0],
+            "item_count": [1],
+        }
+    )
+    contacts = pd.DataFrame(
+        {
+            "customer_id": ["C1"],
+            "order_id": ["O1"],
+            "contact_ts": pd.to_datetime(["2026-01-07"]),  # 3 days AFTER checkout
+            "channel": ["email"],
+        }
+    )
+    tables = make_tables(orders=orders, support_contacts=contacts)
+    assert support_contact_count_30d(tables).loc["O1"] == 0.0

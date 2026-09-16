@@ -1,7 +1,8 @@
 """Train and evaluate the return-risk model.
 
-Uses a random 80/20 split -- simpler and more stable than the old temporal
-carve-out. `--eval-only` re-scores the saved model on the holdout.
+Protocol (documented in MODEL_CARD.md): temporal split -- train on everything
+before the holdout cutoff, evaluate ROC AUC on the final 3 months. `--eval-only`
+re-scores the saved model on the holdout without retraining.
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ from pathlib import Path
 
 import pandas as pd
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
 from feature_catalog.frame import build_training_frame
@@ -21,20 +21,19 @@ from feature_catalog.types import FeatureConfig, Tables
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MODEL_DIR = Path(__file__).resolve().parents[1]
 ARTIFACTS = MODEL_DIR / "artifacts"
+HOLDOUT_MONTHS = 3
 
 
 def load_config() -> FeatureConfig:
     return FeatureConfig.load(MODEL_DIR / "feature-configs" / "v1.yaml")
 
 
-def shuffle_split(
-    frame: pd.DataFrame, test_size: float = 0.2
+def temporal_split(
+    frame: pd.DataFrame, holdout_months: int = HOLDOUT_MONTHS
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Random split for evaluation."""
-    train_frame, test_frame = train_test_split(
-        frame, test_size=test_size, random_state=42, stratify=frame["label"]
-    )
-    return train_frame, test_frame
+    """Train on history, evaluate on the most recent window -- never the reverse."""
+    cutoff = frame["checkout_ts"].max() - pd.DateOffset(months=holdout_months)
+    return frame[frame["checkout_ts"] <= cutoff], frame[frame["checkout_ts"] > cutoff]
 
 
 def fit(train_frame: pd.DataFrame, features: list[str]) -> XGBClassifier:
@@ -61,7 +60,7 @@ def main(eval_only: bool = False) -> None:
     config = load_config()
     tables = Tables.load(REPO_ROOT / "data")
     frame = build_training_frame(tables, config.features, config.label_horizon_days)
-    train_frame, holdout = shuffle_split(frame)
+    train_frame, holdout = temporal_split(frame)
 
     if eval_only:
         model = XGBClassifier()
@@ -73,7 +72,7 @@ def main(eval_only: bool = False) -> None:
         holdout["label"], model.predict_proba(holdout[config.features])[:, 1]
     )
     importances = gain_share(model, config.features)
-    print(f"holdout AUC (random 20% split): {auc:.4f}")
+    print(f"holdout AUC (temporal, last {HOLDOUT_MONTHS} months): {auc:.4f}")
     print("feature importance (gain share):")
     for name, share in sorted(importances.items(), key=lambda kv: -kv[1]):
         print(f"  {name:<32s} {share:.3f}")

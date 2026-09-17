@@ -20,6 +20,8 @@ FEATURES: dict[str, FeatureFn] = {
     "customer_prior_order_count": customers.customer_prior_order_count,
     "customer_avg_order_value": customers.customer_avg_order_value,
     "customer_days_since_last_order": customers.customer_days_since_last_order,
+    "customer_prior_return_rate": customers.customer_prior_return_rate,
+    "customer_prior_return_count": customers.customer_prior_return_count,
     "weekend_order": customers.weekend_order,
     "checkout_hour": customers.checkout_hour,
     "support_contact_count_30d": customers.support_contact_count_30d,

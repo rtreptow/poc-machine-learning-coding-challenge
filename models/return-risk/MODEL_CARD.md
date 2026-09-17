@@ -34,6 +34,21 @@ Selected per-model in `feature-configs/v1.yaml`; implementations live in
 > feature to a strict pre-checkout lookback and restoring the temporal split
 > yields 0.81, in line with prod. This was inflated offline evaluation, not drift.
 
+> **v1.4 repeat-return features (RISK-431):** added two point-in-time customer
+> features — `customer_prior_return_rate` (dollar-weighted share of the customer's
+> prior order value returned) and `customer_prior_return_count` (volume). The rate
+> counts only **matured** prior orders — those whose full 60-day return window has
+> closed by this checkout — so it is not deflated by orders still in play, and a
+> future return cannot leak in (a matured order's outcome is fully settled by
+> scoring time). Offline AUC (temporal split) rises **0.81 → 0.90** (0.8962).
+> Verified genuine, not leakage: a variant that lets prior orders' *future*
+> returns leak in scores only ~+0.005 higher (0.8927 vs 0.8979 on the pre-maturity
+> dollar-weighted feature). Caveats: customers whose entire history is under 60
+> days old get rate 0.0 (no matured signal yet); the lift depends on reliable
+> customer identity resolution at checkout (guest checkout weakens it);
+> `RETURN_WINDOW_DAYS` in the feature must track `label_horizon_days`; confirm
+> against prod before planning on 0.90.
+
 ## Monitoring
 
 A weekly job scores realized labels at 60 days and reports prod AUC.

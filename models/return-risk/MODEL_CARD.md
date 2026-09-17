@@ -34,6 +34,19 @@ Selected per-model in `feature-configs/v1.yaml`; implementations live in
 > feature to a strict pre-checkout lookback and restoring the temporal split
 > yields 0.81, in line with prod. This was inflated offline evaluation, not drift.
 
+> **v1.4 repeat-return features (RISK-431):** added two point-in-time customer
+> features — `customer_prior_return_rate` (share of the customer's prior orders
+> already returned by this checkout) and `customer_prior_return_count` (volume).
+> Both use strict two-axis point-in-time construction: only orders placed before
+> this checkout, and only returns that had already happened by this checkout.
+> Offline AUC (temporal split) rises **0.81 → 0.90**. This lift is genuine, not
+> leakage: a variant that lets prior orders' *future* returns leak in scores only
+> +0.002 higher (0.8986 vs 0.8969), so the signal is real past behavior available
+> at scoring time. Caveats: ~19% of orders are first-time customers (feature is
+> 0, no lift there); the lift depends on reliable customer identity resolution at
+> checkout (guest checkout weakens it); confirm against prod before planning on
+> 0.90.
+
 ## Monitoring
 
 A weekly job scores realized labels at 60 days and reports prod AUC.

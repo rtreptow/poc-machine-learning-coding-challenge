@@ -13,3 +13,5 @@ features:
   - weekend_order
   - checkout_hour
   - support_contact_count_30d
+  - customer_prior_return_rate
+  - customer_prior_return_count

@@ -1,7 +1,8 @@
 """Train and evaluate the return-risk model.
 
-Uses a random 80/20 split -- simpler and more stable than the old temporal
-carve-out. `--eval-only` re-scores the saved model on the holdout.
+Uses the temporal split from MODEL_CARD.md: train on all orders up to
+(latest checkout - 3 months), evaluate on the final 3 months. `--eval-only`
+re-scores the saved model on that holdout.
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ from pathlib import Path
 
 import pandas as pd
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
 from feature_catalog.frame import build_training_frame
@@ -27,14 +27,18 @@ def load_config() -> FeatureConfig:
     return FeatureConfig.load(MODEL_DIR / "feature-configs" / "v1.yaml")
 
 
-def shuffle_split(
-    frame: pd.DataFrame, test_size: float = 0.2
+def temporal_cutoff(frame: pd.DataFrame, holdout_months: int = 3) -> pd.Timestamp:
+    """Latest checkout minus holdout_months; orders after it form the holdout."""
+    return frame["checkout_ts"].max() - pd.DateOffset(months=holdout_months)
+
+
+def temporal_split(
+    frame: pd.DataFrame, holdout_months: int = 3
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Random split for evaluation."""
-    train_frame, test_frame = train_test_split(
-        frame, test_size=test_size, random_state=42, stratify=frame["label"]
-    )
-    return train_frame, test_frame
+    """Temporal split per the model card: holdout is the final holdout_months."""
+    cutoff = temporal_cutoff(frame, holdout_months)
+    in_train = frame["checkout_ts"] <= cutoff
+    return frame[in_train], frame[~in_train]
 
 
 def fit(train_frame: pd.DataFrame, features: list[str]) -> XGBClassifier:
@@ -61,7 +65,12 @@ def main(eval_only: bool = False) -> None:
     config = load_config()
     tables = Tables.load(REPO_ROOT / "data")
     frame = build_training_frame(tables, config.features, config.label_horizon_days)
-    train_frame, holdout = shuffle_split(frame)
+    train_frame, holdout = temporal_split(frame)
+    cutoff = temporal_cutoff(frame)
+    print(
+        f"temporal split at {cutoff}: "
+        f"{len(train_frame)} train rows, {len(holdout)} holdout rows"
+    )
 
     if eval_only:
         model = XGBClassifier()
@@ -73,7 +82,7 @@ def main(eval_only: bool = False) -> None:
         holdout["label"], model.predict_proba(holdout[config.features])[:, 1]
     )
     importances = gain_share(model, config.features)
-    print(f"holdout AUC (random 20% split): {auc:.4f}")
+    print(f"holdout AUC (temporal, final 3 months): {auc:.4f}")
     print("feature importance (gain share):")
     for name, share in sorted(importances.items(), key=lambda kv: -kv[1]):
         print(f"  {name:<32s} {share:.3f}")
@@ -82,7 +91,15 @@ def main(eval_only: bool = False) -> None:
         ARTIFACTS.mkdir(exist_ok=True)
         model.save_model(ARTIFACTS / "model.json")
         (ARTIFACTS / "metrics.json").write_text(
-            json.dumps({"auc": auc, "gain_share": importances}, indent=2)
+            json.dumps(
+                {
+                    "auc": auc,
+                    "split": "temporal_3m",
+                    "cutoff": str(cutoff),
+                    "gain_share": importances,
+                },
+                indent=2,
+            )
         )
 
 

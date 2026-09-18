@@ -51,7 +51,7 @@ def test_v13_customer_signal_features_smoke() -> None:
         {
             "customer_id": ["C1"],
             "order_id": ["O1"],
-            "contact_ts": pd.to_datetime(["2026-01-07"]),
+            "contact_ts": pd.to_datetime(["2026-01-02"]),
             "channel": ["email"],
         }
     )
@@ -60,4 +60,33 @@ def test_v13_customer_signal_features_smoke() -> None:
     assert customer_days_since_last_order(tables).loc["O1"] == -1.0
     assert weekend_order(tables).loc["O1"] == 1.0  # 2026-01-04 is a Sunday
     assert checkout_hour(tables).loc["O2"] == 18.0
+    assert support_contact_count_30d(tables).loc["O1"] == 1.0
+
+
+def test_support_contacts_only_count_before_checkout() -> None:
+    orders = pd.DataFrame(
+        {
+            "order_id": ["O1"],
+            "customer_id": ["C1"],
+            "checkout_ts": pd.to_datetime(["2026-03-01 12:00"]),
+            "order_value": [10.0],
+            "item_count": [1],
+        }
+    )
+    contacts = pd.DataFrame(
+        {
+            "customer_id": ["C1"] * 4,
+            "order_id": ["O1"] * 4,
+            "contact_ts": pd.to_datetime(
+                [
+                    "2026-02-20 00:00",  # before checkout, within 30d: counts
+                    "2026-01-01 00:00",  # before checkout, older than 30d
+                    "2026-03-01 12:00",  # at checkout: not strictly before
+                    "2026-03-05 00:00",  # after checkout: would leak the label
+                ]
+            ),
+            "channel": ["email", "chat", "phone", "email"],
+        }
+    )
+    tables = make_tables(orders=orders, support_contacts=contacts)
     assert support_contact_count_30d(tables).loc["O1"] == 1.0

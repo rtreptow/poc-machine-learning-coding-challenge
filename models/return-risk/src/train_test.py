@@ -18,10 +18,20 @@ def _frame(n: int = 200) -> pd.DataFrame:
     )
 
 
-def test_split_fraction() -> None:
-    train_part, test_part = train.shuffle_split(_frame(), test_size=0.2)
-    assert len(test_part) == 40  # 20% of 200
-    assert len(train_part) == 160
+def test_temporal_split_has_no_overlap() -> None:
+    frame = _frame()
+    cutoff = train.temporal_cutoff(frame)
+    train_part, holdout = train.temporal_split(frame)
+    assert train_part["checkout_ts"].max() <= cutoff < holdout["checkout_ts"].min()
+
+
+def test_temporal_split_holdout_is_final_3_months() -> None:
+    frame = _frame()
+    train_part, holdout = train.temporal_split(frame)
+    latest = frame["checkout_ts"].max()
+    assert holdout["checkout_ts"].min() >= latest - pd.DateOffset(months=3)
+    assert len(train_part) + len(holdout) == len(frame)
+    assert set(train_part["order_id"]).isdisjoint(holdout["order_id"])
 
 
 def test_fit_returns_scoring_model() -> None:
